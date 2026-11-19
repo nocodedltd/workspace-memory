@@ -586,7 +586,15 @@ def _autolog_workspace_allowed(workspace: Path, config: Dict[str, Any]) -> bool:
         forbidden_roots.append(system_temp)
     except OSError:
         pass
-    if any(resolved == root or root in resolved.parents for root in forbidden_roots):
+    test_allowed = False
+    test_allowed_value = os.environ.get("_WSM_TEST_ALLOWED_ROOT", "")
+    if test_allowed_value:
+        try:
+            test_allowed_root = Path(test_allowed_value).expanduser().resolve(strict=True)
+            test_allowed = resolved == test_allowed_root or test_allowed_root in resolved.parents
+        except (FileNotFoundError, OSError):
+            test_allowed = False
+    if not test_allowed and any(resolved == root or root in resolved.parents for root in forbidden_roots):
         return False
     scope = str(config.get("autolog_scope") or "initialised")
     if scope == "all":

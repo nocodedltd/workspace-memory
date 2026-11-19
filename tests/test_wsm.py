@@ -38,6 +38,7 @@ class EnvironmentCase(unittest.TestCase):
             "WSM_CONFIG": str(self.home / ".config/workspace-memory/config.toml"),
             "WSM_STATE_DIR": str(self.home / ".local/state/workspace-memory"),
             "WSM_CASS": str(FAKE),
+            "_WSM_TEST_ALLOWED_ROOT": str(self.root),
             "FAKE_WORKSPACE": str(self.workspace.resolve()),
             "PATH": str(ROOT / "tests") + os.pathsep + os.environ.get("PATH", ""),
         }
@@ -195,6 +196,11 @@ class AutologTests(EnvironmentCase):
         self.assertFalse((self.home / ".agent-memory").exists())
         self.assertFalse(wsm._autolog_workspace_allowed(Path("/tmp"), wsm.load_config()))
         self.assertFalse(wsm._autolog_workspace_allowed(Path("/var"), wsm.load_config()))
+
+    def test_temp_roots_are_refused_without_test_override(self):
+        with mock.patch.dict(os.environ, {"_WSM_TEST_ALLOWED_ROOT": ""}):
+            self.assertFalse(wsm._autolog_workspace_allowed(Path("/tmp"), wsm.load_config()))
+            self.assertFalse(wsm._autolog_workspace_allowed(Path("/private/tmp"), wsm.load_config()))
 
     def test_autolog_all_allows_normal_existing_workspace(self):
         self.assertEqual(self.run_wsm("config", "set", "autolog_scope", "all").returncode, 0)
