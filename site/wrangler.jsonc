@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "workspace-memory-site",
   "compatibility_date": "2026-11-19",
+  "routes": [
+    { "pattern": "memory.nocoded.org", "custom_domain": true }
+  ],
   "assets": {
     "directory": ".",
     "html_handling": "auto-trailing-slash",

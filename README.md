@@ -6,7 +6,7 @@
 
 # workspace-memory
 
-Shared, local memory for every coding agent in the room.
+Shared, local memory for every coding agent in the room. **Website: [memory.nocoded.org](https://memory.nocoded.org)**
 
 ![Licence: MIT](assets/badges/licence.svg) ![Platform: macOS and Linux](assets/badges/platform.svg) ![No LLM calls](assets/badges/no-llm.svg) ![Local only](assets/badges/local.svg)
 
