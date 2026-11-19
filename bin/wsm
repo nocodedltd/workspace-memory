@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+from time import monotonic as _monotonic
+
+PROCESS_STARTED_AT = _monotonic()
+
 import argparse
 import datetime as dt
 import fcntl
@@ -22,6 +26,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 VERSION = "0.1.0"
+HOOK_OUTPUT_BUDGET_SECONDS = 2.0
+HOOK_FALLBACK_RESERVE_SECONDS = 0.2
 DEFAULTS: Dict[str, Any] = {
     "journal_dir": "auto",
     "days": 14,
@@ -995,12 +1001,12 @@ def command_hook(args: argparse.Namespace) -> int:
             journals: List[Tuple[str, str]] = []
 
             def timed_out(_signum: int, _frame: Any) -> None:
-                raise TimeoutError("session-start recall exceeded three seconds")
+                raise TimeoutError("session-start recall exceeded its work budget")
 
             previous = signal.signal(signal.SIGALRM, timed_out)
-            signal.setitimer(signal.ITIMER_REAL, 2.9)
-            deadline = time.monotonic() + 2.9
+            deadline = PROCESS_STARTED_AT + HOOK_OUTPUT_BUDGET_SECONDS - HOOK_FALLBACK_RESERVE_SECONDS
             try:
+                signal.setitimer(signal.ITIMER_REAL, max(0.001, deadline - time.monotonic()))
                 repository_context = _repository_context(Path(cwd))
                 _register_worktree(Path(cwd))
                 workspace = repository_context[1] if repository_context else resolve_workspace(Path(cwd))
@@ -1246,7 +1252,8 @@ def _json_hooks(path: Path, agent: str, command_path: str, remove: bool, backup_
             kept.append(entry)
         if not remove:
             hook_command = f"env CASS_RAW_MIRROR={raw_mirror} {shlex.quote(command_path)} hook {name} --agent {shlex.quote(agent)}"
-            kept.append({"hooks": [{"type": "command", "command": hook_command, "timeout": 3}]})
+            timeout = 10 if name == "session-start" else 3
+            kept.append({"hooks": [{"type": "command", "command": hook_command, "timeout": timeout}]})
         hooks[event] = kept
     if remove:
         if removed == 0:
@@ -1282,7 +1289,7 @@ def _grok_hooks(path: Path, command_path: str, remove: bool, backup_root: Option
   [[hooks.SessionStart.hooks]]
   type = "command"
   command = {json.dumps(start_command)}
-  timeout = 3
+  timeout = 10
 [[hooks.SessionEnd]]
   [[hooks.SessionEnd.hooks]]
   type = "command"

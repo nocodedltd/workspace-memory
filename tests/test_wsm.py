@@ -404,7 +404,7 @@ class HookTests(EnvironmentCase):
         result = self.run_wsm("hook", "session-start", "--agent", "gemini", input_text=json.dumps({"cwd": str(self.workspace)}), extra={"FAKE_CASS_MODE": "hang"})
         elapsed = time.monotonic() - started
         self.assertEqual(result.returncode, 0)
-        self.assertLess(elapsed, 4.0)
+        self.assertLess(elapsed, 2.5)
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("journal survives cass timeout", context)
         self.assertIn("Recent sessions omitted because recall timed out.", context)
@@ -536,10 +536,14 @@ class InstallerTests(EnvironmentCase):
         self.assertEqual((self.home / ".codex/hooks.json").read_bytes(), self.original_codex_bytes)
         hook_command = claude_data["hooks"]["SessionStart"][-1]["hooks"][0]["command"]
         self.assertIn(str(self.home / ".local/bin/wsm"), shlex.split(hook_command))
+        self.assertEqual(claude_data["hooks"]["SessionStart"][-1]["hooks"][0]["timeout"], 10)
+        self.assertEqual(claude_data["hooks"]["SessionEnd"][-1]["hooks"][0]["timeout"], 3)
         grok_text = grok_after.decode()
         encoded_command = re.search(r"^\s*command = (.+)$", grok_text, flags=re.MULTILINE)
         self.assertIsNotNone(encoded_command)
         self.assertIn(str(self.home / ".local/bin/wsm"), shlex.split(json.loads(encoded_command.group(1))))
+        self.assertRegex(grok_text, r"(?s)\[\[hooks\.SessionStart\]\].*?timeout = 10")
+        self.assertRegex(grok_text, r"(?s)\[\[hooks\.SessionEnd\]\].*?timeout = 3")
         env = os.environ.copy()
         env.update(self.environment)
         uninstall = subprocess.run([str(ROOT / "uninstall.sh"), "--yes"], env=env, cwd=ROOT, text=True, capture_output=True, timeout=20, check=False)
@@ -548,6 +552,25 @@ class InstallerTests(EnvironmentCase):
         self.assertEqual((self.home / ".grok/config.toml").read_text(), 'model = "grok-code"\n')
         self.assertEqual(json.loads((self.home / ".gemini/settings.json").read_text()), {"theme": "default"})
         self.assertFalse((self.home / ".local/bin/wsm").exists())
+
+    def test_reinstall_updates_existing_start_hook_timeout(self):
+        first = self.install()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        claude_path = self.home / ".claude/settings.json"
+        claude_data = json.loads(claude_path.read_text())
+        claude_data["hooks"]["SessionStart"][-1]["hooks"][0]["timeout"] = 3
+        claude_path.write_text(json.dumps(claude_data, indent=2) + "\n")
+        grok_path = self.home / ".grok/config.toml"
+        grok_path.write_text(grok_path.read_text().replace("timeout = 10", "timeout = 3", 1))
+
+        second = self.install()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        updated_claude = json.loads(claude_path.read_text())
+        self.assertEqual(updated_claude["hooks"]["SessionStart"][-1]["hooks"][0]["timeout"], 10)
+        self.assertEqual(updated_claude["hooks"]["SessionEnd"][-1]["hooks"][0]["timeout"], 3)
+        updated_grok = grok_path.read_text()
+        self.assertRegex(updated_grok, r"(?s)\[\[hooks\.SessionStart\]\].*?timeout = 10")
+        self.assertRegex(updated_grok, r"(?s)\[\[hooks\.SessionEnd\]\].*?timeout = 3")
 
     def test_skill_symlink_is_skipped_and_user_skill_is_backed_up(self):
         external = self.root / "managed skills"
