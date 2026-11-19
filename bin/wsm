@@ -261,15 +261,53 @@ def _path_belongs_to(path: str, roots: Iterable[Path]) -> bool:
     return any(resolved == root or root in resolved.parents for root in roots)
 
 
+def _repository_root_allowed(current: Path, repository_root: Path) -> bool:
+    return repository_root not in (Path("/"), home().resolve()) or current == repository_root
+
+
+def _has_workspace_marker(path: Path) -> bool:
+    return any((path / marker).exists() for marker in (".agent-memory", ".memsearch", ".git"))
+
+
+def _session_belongs_to_workspace(path: str, workspace: Path, roots: Iterable[Path]) -> bool:
+    try:
+        resolved = Path(path).expanduser().resolve()
+    except OSError:
+        return False
+    workspace_root = workspace.resolve()
+    if workspace_root in (Path("/"), home().resolve()):
+        return resolved == workspace_root
+    matching_roots = sorted(
+        (root for root in roots if resolved == root or root in resolved.parents),
+        key=lambda root: len(root.parts), reverse=True,
+    )
+    for root in matching_roots:
+        if resolved == root:
+            return True
+        current = resolved
+        while current != root:
+            if _has_workspace_marker(current):
+                break
+            current = current.parent
+        else:
+            return True
+    return False
+
+
 def resolve_workspace(start: Optional[Path] = None) -> Path:
     current = (start or Path.cwd()).expanduser().resolve()
     if current.is_file():
         current = current.parent
     context = _repository_context(current)
-    if context:
+    if context and _repository_root_allowed(current, context[1]):
         return context[1]
+    home_root = home().resolve()
     ancestors = [current] + list(current.parents)
     for candidate in ancestors:
+        if candidate == Path("/"):
+            break
+        if candidate == home_root and current != home_root:
+            break
         for marker in (".agent-memory", ".memsearch"):
             if (candidate / marker).exists():
                 return candidate
@@ -295,8 +333,11 @@ def journal_dir(
     else:
         path = workspace / ".agent-memory/journal"
     agent_memory = workspace / ".agent-memory"
+    memsearch_memory = workspace / ".memsearch"
     if create and (path == agent_memory or agent_memory in path.parents):
-        _add_info_exclude(workspace)
+        _add_info_exclude(workspace, ".agent-memory/")
+    if create and (path == memsearch_memory or memsearch_memory in path.parents):
+        _add_info_exclude(workspace, ".memsearch/")
     if create:
         path.mkdir(parents=True, exist_ok=True)
     return path
@@ -441,7 +482,7 @@ def get_sessions(
         item_workspace = str(item.get("workspace") or "")
         if is_private(item_workspace):
             continue
-        if not all_workspaces and roots and not _path_belongs_to(item_workspace, roots):
+        if not all_workspaces and roots and workspace and not _session_belongs_to_workspace(item_workspace, workspace, roots):
             continue
         identity = session_path(item)
         if identity in seen:
@@ -472,7 +513,7 @@ def search_hits(query: str, workspace: Optional[Path], days: int, limit: int, al
         workspace_value = str(hit.get("workspace") or "")
         if is_private(workspace_value):
             continue
-        if not all_workspaces and workspace and not _path_belongs_to(workspace_value, _repository_paths(workspace)):
+        if not all_workspaces and workspace and not _session_belongs_to_workspace(workspace_value, workspace, _repository_paths(workspace)):
             continue
         if any(identifier in path for identifier in current_ids):
             continue
@@ -915,7 +956,7 @@ def command_handoff(args: argparse.Namespace) -> int:
     return 0
 
 
-def _add_info_exclude(workspace: Path) -> None:
+def _add_info_exclude(workspace: Path, entry: str = ".agent-memory/") -> None:
     context = _repository_context(workspace)
     if context:
         git_dir = context[0]
@@ -925,13 +966,15 @@ def _add_info_exclude(workspace: Path) -> None:
             return
     exclude = git_dir / "info/exclude"
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
-    if ".agent-memory/" not in existing.splitlines():
-        atomic_write(exclude, existing + ("" if not existing or existing.endswith("\n") else "\n") + ".agent-memory/\n")
+    if entry not in existing.splitlines():
+        atomic_write(exclude, existing + ("" if not existing or existing.endswith("\n") else "\n") + entry + "\n")
 
 
 def command_init(args: argparse.Namespace) -> int:
     _register_worktree(Path.cwd())
-    workspace = resolve_workspace()
+    current = Path.cwd().resolve()
+    context = _repository_context(current)
+    workspace = context[1] if context and _repository_root_allowed(current, context[1]) else current
     journal_dir(workspace, create=True)
     if args.share:
         ignore = workspace / ".gitignore"

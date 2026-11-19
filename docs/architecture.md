@@ -209,7 +209,7 @@ flowchart TB
 - **Private workspaces are removed from the index entirely** with `cass forget`, and re-excluded on every refresh. That is the way to keep an NDA client's sessions out of everything, including cross-workspace searches.
 - **Recalled text is labelled untrusted history,** so instructions hidden in an old session are presented as history, not obeyed.
 - **Secrets are redacted** from anything wsm prints or writes, and `wsm log` refuses text that looks like a key.
-- **Journals are kept out of git** through `.git/info/exclude`, because they quote sessions. Autolog only writes into workspaces that have opted in, never into the home folder or temporary folders.
+- **Journals are kept out of git** through the repository's common `info/exclude`, and the installer adds `.memsearch/` and `.agent-memory/` to the user's global Git excludes by default. Autolog only writes into workspaces that have opted in, never into the home folder or temporary folders. Workspace discovery stops before HOME and recall never crosses into a nested initialised workspace.
 
 ## What runs where
 

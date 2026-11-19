@@ -7,6 +7,7 @@ AGENTS=auto
 NO_HOOKS=0
 NO_SCHEDULE=0
 NO_INSTRUCTIONS=0
+NO_GLOBAL_IGNORE=0
 DRY_RUN=0
 YES=0
 COPY=0
@@ -15,7 +16,7 @@ CASS_VERSION=0.11.0
 MINIMUM_CASS_VERSION=0.11.0
 
 usage() {
-  echo "Usage: ./install.sh [--agents auto|claude,codex,grok,gemini,opencode] [--no-hooks] [--no-schedule] [--no-instructions] [--cass-version X] [--accept-cass-licence] [--copy] [--dry-run] [--yes]"
+  echo "Usage: ./install.sh [--agents auto|claude,codex,grok,gemini,opencode] [--no-hooks] [--no-schedule] [--no-instructions] [--no-global-ignore] [--cass-version X] [--accept-cass-licence] [--copy] [--dry-run] [--yes]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -24,6 +25,7 @@ while [ "$#" -gt 0 ]; do
     --no-hooks) NO_HOOKS=1; shift ;;
     --no-schedule) NO_SCHEDULE=1; shift ;;
     --no-instructions) NO_INSTRUCTIONS=1; shift ;;
+    --no-global-ignore) NO_GLOBAL_IGNORE=1; shift ;;
     --cass-version) CASS_VERSION=${2#v}; shift 2 ;;
     --accept-cass-licence) ACCEPT=1; shift ;;
     --copy) COPY=1; shift ;;
@@ -81,6 +83,8 @@ echo "  configure agents: $AGENTS"
 [ "$NO_HOOKS" -eq 1 ] && echo "  skip hooks"
 [ "$NO_INSTRUCTIONS" -eq 1 ] && echo "  skip global instructions"
 [ "$NO_SCHEDULE" -eq 1 ] && echo "  skip the refresh schedule"
+[ "$NO_GLOBAL_IGNORE" -eq 0 ] && echo "  add .memsearch/ and .agent-memory/ to the global Git excludes"
+[ "$NO_GLOBAL_IGNORE" -eq 1 ] && echo "  skip global Git excludes"
 echo "  keep all journals and search data on this machine"
 
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -91,6 +95,32 @@ if [ "$YES" -ne 1 ]; then
   printf "Continue? [y/N] "
   read -r answer
   case "$answer" in y|Y|yes|YES) ;; *) echo "Cancelled."; exit 1 ;; esac
+fi
+
+if [ "$NO_GLOBAL_IGNORE" -eq 0 ]; then
+  if command -v git >/dev/null 2>&1; then
+    global_ignore=$(git config --global --path --get core.excludesFile 2>/dev/null || true)
+    if [ -z "$global_ignore" ]; then
+      global_ignore="$HOME/.config/git/ignore"
+      mkdir -p "$(dirname "$global_ignore")"
+      git config --global core.excludesFile "$global_ignore"
+    else
+      global_ignore=$(python3 - "$global_ignore" "$HOME" <<'PY'
+import os, sys
+value = os.path.expanduser(sys.argv[1])
+print(value if os.path.isabs(value) else os.path.join(sys.argv[2], value))
+PY
+)
+      mkdir -p "$(dirname "$global_ignore")"
+    fi
+    touch "$global_ignore"
+    for ignore_entry in '.memsearch/' '.agent-memory/'; do
+      grep -Fqx "$ignore_entry" "$global_ignore" || printf '%s\n' "$ignore_entry" >> "$global_ignore"
+    done
+    echo "Global Git excludes updated at $global_ignore."
+  else
+    echo "Warning: git is unavailable, so global memory excludes were not added."
+  fi
 fi
 
 STATE="$HOME/.local/state/workspace-memory"

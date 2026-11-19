@@ -2,6 +2,8 @@
 
 ## 0.1.1, 2026-11-19
 
+- Prevented HOME's global `.memsearch` directory and nested initialised workspaces from widening recall scope.
+- Added `.memsearch/` to repository-local exclusions and protective global Git excludes during installation.
 - Shared one repository journal across linked worktrees, kept it after worktree cleanup and recalled sessions from current and recorded former worktrees.
 - Wrote local exclusions to Git's common directory, including for submodules, and kept bare-repository journals inside the common directory.
 - Extended repository privacy to all known worktrees and read worktree-local memsearch notes alongside the shared journal.

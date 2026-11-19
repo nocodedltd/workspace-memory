@@ -91,6 +91,28 @@ class WorkspaceTests(EnvironmentCase):
         self.assertIn(".agent-memory/", entries)
         self.assertIn(".memsearch/", entries)
 
+    def test_home_memsearch_is_not_discovered_from_an_unmarked_folder(self):
+        (self.home / ".git").mkdir()
+        (self.home / ".memsearch/memory").mkdir(parents=True)
+        unmarked = self.home / "Downloads/scratch"
+        unmarked.mkdir(parents=True)
+        self.assertEqual(wsm.resolve_workspace(unmarked), unmarked.resolve())
+        result = self.run_wsm("init", cwd=unmarked)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(unmarked), result.stdout)
+        self.assertTrue((unmarked / ".agent-memory/journal").is_dir())
+
+    def test_init_targets_unmarked_cwd_not_initialised_parent(self):
+        parent = self.root / "initialised-parent"
+        (parent / ".git").mkdir(parents=True)
+        (parent / ".agent-memory").mkdir()
+        child = parent / "unmarked-child"
+        child.mkdir()
+        result = self.run_wsm("init", cwd=child)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(child), result.stdout)
+        self.assertTrue((child / ".agent-memory/journal").is_dir())
+
 
 class GitWorktreeTests(EnvironmentCase):
     def git(self, *arguments, cwd=None):
@@ -141,6 +163,14 @@ class GitWorktreeTests(EnvironmentCase):
         common = Path(self.git("rev-parse", "--git-common-dir", cwd=submodule))
         common = common if common.is_absolute() else (submodule / common).resolve()
         self.assertIn(".agent-memory/", (common / "info/exclude").read_text())
+
+    def test_memsearch_journal_uses_common_git_exclude(self):
+        repository = self.make_repository()
+        (repository / ".memsearch/memory").mkdir(parents=True)
+        result = self.run_wsm("init", cwd=repository)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        entries = (repository / ".git/info/exclude").read_text().splitlines()
+        self.assertIn(".memsearch/", entries)
 
     def test_removed_worktree_memory_and_sessions_remain_visible(self):
         repository = self.make_repository()
@@ -245,6 +275,25 @@ class RecallTests(EnvironmentCase):
     def test_all_prints_warning(self):
         result = self.run_wsm("recall", "upload", "--all")
         self.assertIn("WARNING: searching all non-private workspaces", result.stdout)
+
+    def test_recall_from_home_excludes_descendant_workspaces(self):
+        (self.home / ".git").mkdir()
+        (self.home / ".memsearch/memory").mkdir(parents=True)
+        descendant = self.home / "project"
+        (descendant / ".agent-memory").mkdir(parents=True)
+        result = self.run_wsm("recall", cwd=self.home, extra={"FAKE_WORKSPACE": str(descendant)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("Fixed upload retry", result.stdout)
+
+    def test_recall_excludes_nested_initialised_workspace(self):
+        parent = self.root / "parent-workspace"
+        (parent / ".git").mkdir(parents=True)
+        (parent / ".agent-memory/journal").mkdir(parents=True)
+        descendant = parent / "nested-workspace"
+        (descendant / ".agent-memory").mkdir(parents=True)
+        result = self.run_wsm("recall", cwd=parent, extra={"FAKE_WORKSPACE": str(descendant)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("Fixed upload retry", result.stdout)
 
 
 class RedactionTests(unittest.TestCase):
@@ -544,14 +593,31 @@ class InstallerTests(EnvironmentCase):
         self.assertIn(str(self.home / ".local/bin/wsm"), shlex.split(json.loads(encoded_command.group(1))))
         self.assertRegex(grok_text, r"(?s)\[\[hooks\.SessionStart\]\].*?timeout = 10")
         self.assertRegex(grok_text, r"(?s)\[\[hooks\.SessionEnd\]\].*?timeout = 3")
+        global_ignore = self.home / ".config/git/ignore"
+        ignore_entries = global_ignore.read_text().splitlines()
+        self.assertEqual(ignore_entries.count(".memsearch/"), 1)
+        self.assertEqual(ignore_entries.count(".agent-memory/"), 1)
+        configured_ignore = subprocess.run(
+            ["git", "config", "--global", "--path", "--get", "core.excludesFile"],
+            env={**os.environ, **self.environment}, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(Path(configured_ignore.stdout.strip()), global_ignore)
         env = os.environ.copy()
         env.update(self.environment)
         uninstall = subprocess.run([str(ROOT / "uninstall.sh"), "--yes"], env=env, cwd=ROOT, text=True, capture_output=True, timeout=20, check=False)
         self.assertEqual(uninstall.returncode, 0, uninstall.stderr)
+        self.assertIn("global Git ignore entries were left in place", uninstall.stdout)
+        self.assertTrue(global_ignore.is_file())
         self.assertEqual(json.loads((self.home / ".claude/settings.json").read_text()), self.original_claude)
         self.assertEqual((self.home / ".grok/config.toml").read_text(), 'model = "grok-code"\n')
         self.assertEqual(json.loads((self.home / ".gemini/settings.json").read_text()), {"theme": "default"})
         self.assertFalse((self.home / ".local/bin/wsm").exists())
+
+    def test_no_global_ignore_skips_git_configuration(self):
+        result = self.install(extra_args=["--no-global-ignore"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".config/git/ignore").exists())
+        self.assertFalse((self.home / ".gitconfig").exists())
 
     def test_reinstall_updates_existing_start_hook_timeout(self):
         first = self.install()

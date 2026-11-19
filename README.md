@@ -61,6 +61,7 @@ Useful options:
 ```sh
 ./install.sh --agents claude,codex,gemini
 ./install.sh --no-hooks --no-schedule
+./install.sh --no-global-ignore
 ./install.sh --copy
 ./install.sh --yes --accept-cass-licence
 ```
@@ -75,6 +76,7 @@ The installer may change:
 - workspace-memory skill directories for Claude Code and Codex;
 - one launchd agent, systemd user timer or marked crontab line;
 - config, backups and logs under the normal user config and state directories.
+- `.memsearch/` and `.agent-memory/` entries in the user's global Git excludes, unless `--no-global-ignore` is used. Uninstall leaves these protective entries in place.
 
 It backs up each regular configuration file before its first change. It never writes through a symlinked settings, instruction or skill path. Existing skill directories that were not installed by this kit are backed up before replacement, and uninstall only removes skill directories carrying the kit's marker.
 
@@ -87,7 +89,7 @@ wsm init
 wsm recall "the task I am about to start"
 ```
 
-`wsm init` creates the journal and adds `.agent-memory/` to `.git/info/exclude`. It does not alter `.gitignore` unless you explicitly use `wsm init --share`. Use `wsm init --cursor` to add a workspace Cursor rule.
+`wsm init` creates the journal and adds its local memory directory, `.agent-memory/` or `.memsearch/`, to Git's common `info/exclude`. It does not alter `.gitignore` unless you explicitly use `wsm init --share`. Use `wsm init --cursor` to add a workspace Cursor rule.
 
 `wsm log` applies the same local Git exclusion before creating a journal. Automatic logging defaults to initialised workspaces, meaning the resolved workspace root must already contain `.agent-memory/` or `.memsearch/`; sessions recorded from a subfolder still journal at that root. It never writes to the home directory itself or temporary and system directories. Set `autolog_scope` to `all` only if automatic notes should also be created in other ordinary workspaces.
 
@@ -127,7 +129,7 @@ The `cass view` command printed after each search match expands the original evi
 | `wsm doctor --json` | Inspect cass, selected-agent hooks and instructions, scheduler, privacy and disk space |
 | `wsm config` | Read or set local configuration |
 
-Workspace resolution uses the nearest ancestor containing `.agent-memory/`, then `.memsearch/`, then `.git`; otherwise it uses the current directory. cass 0.11.0 records an exact workspace on each session. `wsm` asks cass for recent sessions, then includes exact-root and descendant workspace paths client-side. Search itself is scoped to the resolved root, which matches cass's exact workspace field.
+Workspace resolution uses the nearest ancestor containing `.agent-memory/`, then `.memsearch/`, then `.git`; otherwise it uses the current directory. Discovery stops before HOME and `/`, so a global `~/.memsearch` directory can never turn every folder below HOME into one workspace. cass 0.11.0 records an exact workspace on each session. `wsm` includes descendant paths only until it reaches another initialised workspace or Git root, preventing a parent workspace from absorbing a nested project's sessions.
 
 ## Privacy and safety
 

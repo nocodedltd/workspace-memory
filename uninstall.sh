@@ -116,4 +116,4 @@ fi
 
 rm -f "$RECEIPT" "$STATE/index.pid"
 [ "$PURGE" -eq 1 ] && rm -rf "$STATE"
-echo "Uninstalled workspace-memory. Workspace journals were left in place."
+echo "Uninstalled workspace-memory. Workspace journals and global Git ignore entries were left in place."
