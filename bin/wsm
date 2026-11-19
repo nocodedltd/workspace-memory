@@ -148,23 +148,136 @@ def atomic_write(path: Path, content: str, mode: Optional[int] = None) -> None:
     os.replace(temp_path, path)
 
 
+def _git_value(start: Path, arguments: Sequence[str]) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(start), *arguments], text=True, capture_output=True,
+            timeout=3, check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _repository_context(start: Path) -> Optional[Tuple[Path, Path, Path, bool]]:
+    """Return common dir, repository identity, current worktree and bare status."""
+    candidate = start.expanduser().resolve()
+    if candidate.is_file():
+        candidate = candidate.parent
+    worktree_value = _git_value(candidate, ["rev-parse", "--show-toplevel"])
+    common_value = _git_value(candidate, ["rev-parse", "--git-common-dir"])
+    if not common_value:
+        return None
+    worktree = Path(worktree_value).expanduser().resolve() if worktree_value else candidate
+    raw_common = Path(common_value).expanduser()
+    common_dir = raw_common.resolve() if raw_common.is_absolute() else (worktree / raw_common).resolve()
+    bare = _git_value(candidate, ["config", "--bool", "core.bare"]) == "true"
+    if bare:
+        repository_root = common_dir
+    elif common_dir.name == ".git":
+        repository_root = common_dir.parent
+    else:
+        # Submodules keep their common directory under the superproject's
+        # .git/modules tree, so its parent is not the submodule worktree.
+        configured_worktree = _git_value(candidate, ["config", "--path", "core.worktree"])
+        raw_root = Path(configured_worktree).expanduser() if configured_worktree else worktree
+        repository_root = raw_root.resolve() if raw_root.is_absolute() else (common_dir / raw_root).resolve()
+    return common_dir, repository_root, worktree, bare
+
+
+def _current_worktrees(common_dir: Path) -> List[Path]:
+    value = _git_value(common_dir, ["worktree", "list", "--porcelain"])
+    paths: List[Path] = []
+    for line in value.splitlines():
+        if not line.startswith("worktree "):
+            continue
+        raw = line.removeprefix("worktree ")
+        path = Path(raw).expanduser()
+        if path.is_absolute():
+            paths.append(path.resolve())
+    return paths
+
+
+def _registry_path(common_dir: Path) -> Path:
+    return common_dir / "agent-memory/worktrees"
+
+
+def _registered_worktrees(common_dir: Path) -> List[Path]:
+    path = _registry_path(common_dir)
+    if not path.is_file():
+        return []
+    paths: List[Path] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        candidate = Path(line).expanduser()
+        if candidate.is_absolute():
+            paths.append(candidate.resolve())
+    return paths
+
+
+def _register_worktree(start: Path) -> None:
+    context = _repository_context(start)
+    if not context:
+        return
+    common_dir, _, worktree, _ = context
+    path = _registry_path(common_dir)
+    existing = _registered_worktrees(common_dir)
+    if worktree in existing:
+        return
+    content = "" if not path.exists() else path.read_text(encoding="utf-8", errors="replace")
+    separator = "" if not content or content.endswith("\n") else "\n"
+    atomic_write(path, content + separator + str(worktree) + "\n")
+
+
+def _repository_paths(workspace: Path) -> List[Path]:
+    resolved_workspace = workspace.resolve()
+    context = _repository_context(workspace)
+    if not context:
+        return [resolved_workspace]
+    common_dir, repository_root, worktree, _ = context
+    if resolved_workspace not in (repository_root, worktree):
+        return [resolved_workspace]
+    paths = [repository_root, *_current_worktrees(common_dir), *_registered_worktrees(common_dir)]
+    result: List[Path] = []
+    for path in paths:
+        resolved = path.resolve()
+        if resolved not in result:
+            result.append(resolved)
+    return result
+
+
+def _path_belongs_to(path: str, roots: Iterable[Path]) -> bool:
+    try:
+        resolved = Path(path).expanduser().resolve()
+    except OSError:
+        return False
+    return any(resolved == root or root in resolved.parents for root in roots)
+
+
 def resolve_workspace(start: Optional[Path] = None) -> Path:
     current = (start or Path.cwd()).expanduser().resolve()
     if current.is_file():
         current = current.parent
+    context = _repository_context(current)
+    if context:
+        return context[1]
     ancestors = [current] + list(current.parents)
     for candidate in ancestors:
-        for marker in (".agent-memory", ".memsearch", ".git"):
+        for marker in (".agent-memory", ".memsearch"):
             if (candidate / marker).exists():
                 return candidate
+        if (candidate / ".git").exists():
+            return candidate
     return current
 
 
 def journal_dir(workspace: Path, create: bool = False) -> Path:
     configured = str(load_config().get("journal_dir") or "auto")
+    context = _repository_context(workspace)
     if configured != "auto":
         candidate = Path(configured).expanduser()
         path = candidate if candidate.is_absolute() else workspace / candidate
+    elif context and context[3]:
+        path = context[0] / "agent-memory/journal"
     elif (workspace / ".memsearch/memory").is_dir() and not (workspace / ".agent-memory").exists():
         path = workspace / ".memsearch/memory"
     else:
@@ -205,15 +318,16 @@ def _save_private_sources(value: Dict[str, List[str]]) -> None:
 
 
 def _discover_indexed_sources(workspace: Path) -> List[str]:
-    root = str(workspace.resolve())
+    roots = _repository_paths(workspace)
     rows: List[Dict[str, Any]] = []
-    exact, _ = cass_json(["sessions", "--workspace", root, "--limit", "10000", "--json"], timeout=5)
-    if exact:
-        rows.extend(exact.get("sessions", []))
+    for root in roots:
+        exact, _ = cass_json(["sessions", "--workspace", str(root), "--limit", "10000", "--json"], timeout=5)
+        if exact:
+            rows.extend(exact.get("sessions", []))
     all_sessions, _ = cass_json(["sessions", "--limit", "10000", "--json"], timeout=5)
     if all_sessions:
         rows.extend(all_sessions.get("sessions", []))
-    return sorted({session_path(item) for item in rows if str(item.get("workspace") or "") == root or str(item.get("workspace") or "").startswith(root + os.sep) if session_path(item)})
+    return sorted({session_path(item) for item in rows if _path_belongs_to(str(item.get("workspace") or ""), roots) if session_path(item)})
 
 
 def is_private(path: str) -> bool:
@@ -222,7 +336,7 @@ def is_private(path: str) -> bool:
     except OSError:
         return False
     for private in private_paths():
-        if resolved == private or private in resolved.parents:
+        if _path_belongs_to(str(resolved), _repository_paths(private)):
             return True
     return False
 
@@ -289,15 +403,16 @@ def session_path(item: Dict[str, Any]) -> str:
 
 
 def get_sessions(workspace: Optional[Path], limit: int, all_workspaces: bool = False) -> Tuple[List[Dict[str, Any]], str]:
-    root = str(workspace.resolve()) if workspace else ""
+    roots = _repository_paths(workspace) if workspace else []
     collected: List[Dict[str, Any]] = []
     errors: List[str] = []
-    if root and not all_workspaces:
-        exact, exact_error = cass_json(["sessions", "--workspace", root, "--limit", str(max(limit, 10)), "--json"], timeout=1.2)
-        if exact:
-            collected.extend(exact.get("sessions", exact.get("items", [])))
-        elif exact_error:
-            errors.append(exact_error)
+    if roots and not all_workspaces:
+        for root in roots:
+            exact, exact_error = cass_json(["sessions", "--workspace", str(root), "--limit", str(max(limit, 10)), "--json"], timeout=1.2)
+            if exact:
+                collected.extend(exact.get("sessions", exact.get("items", [])))
+            elif exact_error:
+                errors.append(exact_error)
     data, error = cass_json(["sessions", "--limit", str(max(limit * 10, 200)), "--json"], timeout=1.2)
     if data:
         collected.extend(data.get("sessions", data.get("items", [])))
@@ -309,7 +424,7 @@ def get_sessions(workspace: Optional[Path], limit: int, all_workspaces: bool = F
         item_workspace = str(item.get("workspace") or "")
         if is_private(item_workspace):
             continue
-        if not all_workspaces and root and not (item_workspace == root or item_workspace.startswith(root + os.sep)):
+        if not all_workspaces and roots and not _path_belongs_to(item_workspace, roots):
             continue
         identity = session_path(item)
         if identity in seen:
@@ -322,7 +437,7 @@ def get_sessions(workspace: Optional[Path], limit: int, all_workspaces: bool = F
 def search_hits(query: str, workspace: Optional[Path], days: int, limit: int, all_workspaces: bool) -> Tuple[List[Dict[str, Any]], str]:
     args = ["search", query, "--days", str(days), "--limit", str(max(limit * 25, 200)), "--max-content-length", "1000", "--json", "--no-maintenance"]
     if not all_workspaces and workspace:
-        roots = {str(workspace.resolve())}
+        roots = {str(path) for path in _repository_paths(workspace)}
         descendant_sessions, _ = get_sessions(workspace, 200)
         roots.update(str(item.get("workspace")) for item in descendant_sessions if item.get("workspace"))
         for root in sorted(roots):
@@ -339,6 +454,8 @@ def search_hits(query: str, workspace: Optional[Path], days: int, limit: int, al
         path = session_path(hit)
         workspace_value = str(hit.get("workspace") or "")
         if is_private(workspace_value):
+            continue
+        if not all_workspaces and workspace and not _path_belongs_to(workspace_value, _repository_paths(workspace)):
             continue
         if any(identifier in path for identifier in current_ids):
             continue
@@ -382,10 +499,20 @@ def _local_time(value: Any) -> str:
 
 
 def recent_journal(workspace: Path) -> List[Tuple[str, str]]:
-    directory = journal_dir(workspace)
-    if not directory.is_dir():
-        return []
-    files = sorted((path for path in directory.glob("*.md") if path.is_file()), reverse=True)[:2]
+    directories = [journal_dir(workspace)]
+    context = _repository_context(Path.cwd())
+    if context and context[1] == workspace.resolve():
+        memsearch = context[2] / ".memsearch/memory"
+        if memsearch.is_dir() and memsearch not in directories:
+            directories.append(memsearch)
+    files = [
+        path
+        for directory in directories if directory.is_dir()
+        for path in sorted(
+            (candidate for candidate in directory.glob("*.md") if candidate.is_file()),
+            key=lambda candidate: (candidate.name, candidate.stat().st_mtime), reverse=True,
+        )[:2]
+    ]
     return [(path.name, redact(path.read_text(encoding="utf-8", errors="replace"))) for path in files]
 
 
@@ -494,6 +621,7 @@ def command_log(args: argparse.Namespace) -> int:
     if matches:
         print("Refusing to write journal text matching: " + ", ".join(matches), file=sys.stderr)
         return 3
+    _register_worktree(Path.cwd())
     workspace = resolve_workspace()
     directory = journal_dir(workspace, create=True)
     moment = now()
@@ -521,6 +649,7 @@ def _single_line(text: str, limit: int = 240) -> str:
 
 
 def command_autolog(args: argparse.Namespace) -> int:
+    _register_worktree(Path.cwd())
     workspace = resolve_workspace()
     sessions: List[Dict[str, Any]] = []
     if args.session:
@@ -532,12 +661,13 @@ def command_autolog(args: argparse.Namespace) -> int:
     config = load_config()
     for item in sessions:
         item_workspace = str(item.get("workspace") or workspace)
-        if is_private(item_workspace):
-            continue
         workspace_path = Path(item_workspace).expanduser()
         if not workspace_path.is_dir():
             continue
+        _register_worktree(workspace_path)
         root = resolve_workspace(workspace_path)
+        if is_private(str(root)) or is_private(item_workspace):
+            continue
         if not _autolog_workspace_allowed(root, config):
             continue
         path = session_path(item)
@@ -599,13 +729,15 @@ def _autolog_workspace_allowed(workspace: Path, config: Dict[str, Any]) -> bool:
     scope = str(config.get("autolog_scope") or "initialised")
     if scope == "all":
         return True
-    return (resolved / ".agent-memory").is_dir() or (resolved / ".memsearch").is_dir()
+    return any((resolved / marker).is_dir() for marker in (".agent-memory", ".memsearch", "agent-memory"))
 
 
 def _apply_private(path: Path, reinclude: bool = False) -> Tuple[bool, str]:
     executable = cass_executable()
     details = []
-    for workspace_glob in (str(path.resolve()), str(path.resolve()) + "/**"):
+    roots = _repository_paths(path)
+    workspace_globs = [value for root in roots for value in (str(root), str(root) + "/**")]
+    for workspace_glob in workspace_globs:
         args = ["forget", "--workspace-glob", workspace_glob]
         if reinclude:
             args.append("--reinclude")
@@ -643,7 +775,9 @@ def command_private(args: argparse.Namespace) -> int:
     if not args.path:
         print("PATH is required", file=sys.stderr)
         return 2
-    path = Path(args.path).expanduser().resolve()
+    requested_path = Path(args.path).expanduser().resolve()
+    context = _repository_context(requested_path)
+    path = context[1] if context and requested_path == context[2] else requested_path
     source_map = _load_private_sources()
     if args.action == "add":
         source_map[str(path)] = sorted(set(source_map.get(str(path), [])) | set(_discover_indexed_sources(path)))
@@ -728,7 +862,10 @@ def _write_refresh_status(started_at: str, ok: bool, return_code: int, detail: s
 def command_handoff(args: argparse.Namespace) -> int:
     workspace = resolve_workspace()
     query = args.query or "decided implemented failed waiting complete"
-    command = [cass_executable(), "pack", query, "--workspace", str(workspace), "--max-tokens", str(args.max_tokens)]
+    command = [cass_executable(), "pack", query]
+    for root in _repository_paths(workspace):
+        command += ["--workspace", str(root)]
+    command += ["--max-tokens", str(args.max_tokens)]
     try:
         result = run(command, timeout=30)
     except (FileNotFoundError, subprocess.TimeoutExpired) as error:
@@ -742,21 +879,21 @@ def command_handoff(args: argparse.Namespace) -> int:
 
 
 def _add_info_exclude(workspace: Path) -> None:
-    git = workspace / ".git"
-    if not git.exists():
-        return
-    if git.is_file():
-        match = re.search(r"gitdir:\s*(.+)", git.read_text(encoding="utf-8"))
-        if not match:
+    context = _repository_context(workspace)
+    if context:
+        git_dir = context[0]
+    else:
+        git_dir = workspace / ".git"
+        if not git_dir.is_dir():
             return
-        git = (workspace / match.group(1)).resolve()
-    exclude = git / "info/exclude"
+    exclude = git_dir / "info/exclude"
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
     if ".agent-memory/" not in existing.splitlines():
         atomic_write(exclude, existing + ("" if not existing or existing.endswith("\n") else "\n") + ".agent-memory/\n")
 
 
 def command_init(args: argparse.Namespace) -> int:
+    _register_worktree(Path.cwd())
     workspace = resolve_workspace()
     journal_dir(workspace, create=True)
     if args.share:
@@ -823,13 +960,15 @@ def command_hook(args: argparse.Namespace) -> int:
         if session_id:
             os.environ["WSM_SESSION_ID"] = session_id
         if args.event == "session-start":
-            workspace = resolve_workspace(Path(cwd))
+            workspace = Path(cwd).expanduser().resolve()
             def timed_out(_signum: int, _frame: Any) -> None:
                 raise TimeoutError("session-start recall exceeded three seconds")
 
             previous = signal.signal(signal.SIGALRM, timed_out)
             signal.setitimer(signal.ITIMER_REAL, 2.9)
             try:
+                _register_worktree(Path(cwd))
+                workspace = resolve_workspace(Path(cwd))
                 text, _ = build_recall(workspace, None, int(load_config()["days"]), 8, int(load_config()["budget"]), False)
             except TimeoutError as error:
                 _hook_log(f"{args.agent} session-start: {error}")
@@ -840,6 +979,7 @@ def command_hook(args: argparse.Namespace) -> int:
             output = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}
             print(json.dumps(output))
         else:
+            _register_worktree(Path(cwd))
             executable = str(Path(sys.argv[0]).resolve())
             base_env = os.environ.copy()
             base_env["CASS_RAW_MIRROR"] = "1" if bool(load_config().get("raw_mirror")) else "0"

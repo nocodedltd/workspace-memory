@@ -92,6 +92,125 @@ class WorkspaceTests(EnvironmentCase):
         self.assertIn(".memsearch/", entries)
 
 
+class GitWorktreeTests(EnvironmentCase):
+    def git(self, *arguments, cwd=None):
+        result = subprocess.run(
+            ["git", *arguments], cwd=cwd or self.root, text=True,
+            capture_output=True, timeout=8, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip()
+
+    def make_repository(self, name="repository"):
+        repository = self.root / name
+        self.git("init", str(repository))
+        self.git("config", "user.email", "tests@example.com", cwd=repository)
+        self.git("config", "user.name", "Tests", cwd=repository)
+        (repository / "tracked.txt").write_text("tracked\n")
+        self.git("add", "tracked.txt", cwd=repository)
+        self.git("commit", "-m", "initial", cwd=repository)
+        return repository
+
+    def add_worktree(self, repository, name):
+        worktree = self.root / name
+        self.git("worktree", "add", "-b", name, str(worktree), cwd=repository)
+        return worktree
+
+    def test_linked_worktree_uses_common_exclude_and_never_stages_memory(self):
+        repository = self.make_repository()
+        worktree = self.add_worktree(repository, "linked")
+        init = self.run_wsm("init", cwd=worktree)
+        self.assertEqual(init.returncode, 0, init.stderr)
+        logged = self.run_wsm("log", "-m", "- Shared worktree note", cwd=worktree)
+        self.assertEqual(logged.returncode, 0, logged.stderr)
+        self.assertIn(".agent-memory/", (repository / ".git/info/exclude").read_text())
+        self.assertFalse((repository / ".git/worktrees/linked/info/exclude").exists())
+        self.assertEqual(self.git("status", "--porcelain", cwd=worktree), "")
+        self.git("add", "-A", cwd=worktree)
+        staged = self.git("diff", "--cached", "--name-only", cwd=worktree)
+        self.assertNotIn(".agent-memory", staged)
+
+    def test_submodule_uses_its_own_common_exclude(self):
+        child = self.make_repository("child-source")
+        parent = self.make_repository("parent")
+        self.git("-c", "protocol.file.allow=always", "submodule", "add", str(child), "child", cwd=parent)
+        self.git("commit", "-am", "add submodule", cwd=parent)
+        submodule = parent / "child"
+        result = self.run_wsm("init", cwd=submodule)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        common = Path(self.git("rev-parse", "--git-common-dir", cwd=submodule))
+        common = common if common.is_absolute() else (submodule / common).resolve()
+        self.assertIn(".agent-memory/", (common / "info/exclude").read_text())
+
+    def test_removed_worktree_memory_and_sessions_remain_visible(self):
+        repository = self.make_repository()
+        worktree_a = self.add_worktree(repository, "worker-a")
+        worktree_b = self.add_worktree(repository, "worker-b")
+        logged = self.run_wsm("log", "-m", "- Durable note from worker A", cwd=worktree_a)
+        self.assertEqual(logged.returncode, 0, logged.stderr)
+        before = self.run_wsm("recall", cwd=worktree_b, extra={"FAKE_WORKSPACE": str(worktree_a)})
+        self.assertIn("Durable note from worker A", before.stdout)
+        self.git("worktree", "remove", str(worktree_a), cwd=repository)
+        after = self.run_wsm("recall", cwd=worktree_b, extra={"FAKE_WORKSPACE": str(worktree_a)})
+        self.assertIn("Durable note from worker A", after.stdout)
+        self.assertIn("Fixed upload retry", after.stdout)
+        sessions = self.run_wsm("sessions", cwd=worktree_b, extra={"FAKE_WORKSPACE": str(worktree_a)})
+        self.assertIn("Fixed upload retry", sessions.stdout)
+        cass_log = self.root / "cass.log"
+        handoff = self.run_wsm("handoff", cwd=worktree_b, extra={"FAKE_CASS_LOG": str(cass_log)})
+        self.assertEqual(handoff.returncode, 0, handoff.stderr)
+        pack_call = next(json.loads(line) for line in cass_log.read_text().splitlines() if json.loads(line)[0] == "pack")
+        self.assertIn(str(worktree_a), pack_call)
+        registry = repository / ".git/agent-memory/worktrees"
+        self.assertIn(str(worktree_a), registry.read_text().splitlines())
+
+    def test_autolog_is_shared_and_worktree_memsearch_is_also_recalled(self):
+        repository = self.make_repository()
+        worktree_a = self.add_worktree(repository, "autolog-a")
+        worktree_b = self.add_worktree(repository, "autolog-b")
+        self.assertEqual(self.run_wsm("init", cwd=worktree_a).returncode, 0)
+        first = self.run_wsm("autolog", "--session", "/sessions/a.jsonl", "--agent", "claude", cwd=worktree_a)
+        second = self.run_wsm("autolog", "--session", "/sessions/a.jsonl", "--agent", "claude", cwd=worktree_b)
+        self.assertIn("Added 1 automatic journal entry", first.stdout)
+        self.assertIn("Added 0 automatic journal entries", second.stdout)
+        memsearch = worktree_b / ".memsearch/memory"
+        memsearch.mkdir(parents=True)
+        (memsearch / "2099-01-01.md").write_text("worktree-local memsearch note\n")
+        recall = self.run_wsm("recall", cwd=worktree_b)
+        self.assertIn("First request: Please repair", recall.stdout)
+        self.assertIn("worktree-local memsearch note", recall.stdout)
+        journal = next((repository / ".agent-memory/journal").glob("*.md")).read_text()
+        self.assertEqual(journal.count("wsm session=a "), 1)
+
+    def test_private_main_tree_hides_worktree_sessions_even_with_all(self):
+        repository = self.make_repository()
+        worktree = self.add_worktree(repository, "private-worker")
+        added = self.run_wsm("private", "add", str(repository), cwd=repository, extra={"FAKE_WORKSPACE": str(worktree)})
+        self.assertEqual(added.returncode, 0, added.stderr)
+        recall = self.run_wsm("recall", "upload", "--all", cwd=worktree, extra={"FAKE_WORKSPACE": str(worktree)})
+        self.assertNotIn("Fixed upload retry", recall.stdout)
+        self.assertNotIn("Implemented bounded retry", recall.stdout)
+
+    def test_bare_repository_keeps_journal_in_common_directory(self):
+        source = self.make_repository("source")
+        bare = self.root / "repository.git"
+        self.git("clone", "--bare", str(source), str(bare))
+        worktree = self.root / "bare-worker"
+        self.git("--git-dir", str(bare), "worktree", "add", "-b", "bare-worker", str(worktree))
+        result = self.run_wsm("init", cwd=worktree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((bare / "agent-memory/journal").is_dir())
+        self.assertFalse((worktree / ".agent-memory").exists())
+
+    def test_non_git_folder_keeps_local_journal(self):
+        folder = self.root / "ordinary-folder"
+        folder.mkdir()
+        (folder / ".agent-memory").mkdir()
+        result = self.run_wsm("log", "-m", "- Local folder note", cwd=folder)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(next((folder / ".agent-memory/journal").glob("*.md")).is_file())
+
+
 class RecallTests(EnvironmentCase):
     def setUp(self):
         super().setUp()
@@ -233,8 +352,12 @@ class PrivacyAndConfigTests(EnvironmentCase):
     def test_private_add_list_remove(self):
         target = self.root / "private"
         target.mkdir()
+        sibling = self.root / "ordinary"
+        sibling.mkdir()
         self.assertEqual(self.run_wsm("private", "add", str(target)).returncode, 0)
         self.assertIn(str(target), self.run_wsm("private", "list").stdout)
+        self.assertTrue(wsm.is_private(str(target / "nested")))
+        self.assertFalse(wsm.is_private(str(sibling)))
         self.assertEqual(self.run_wsm("private", "remove", str(target)).returncode, 0)
         self.assertNotIn(str(target), self.run_wsm("private", "list").stdout)
 
@@ -495,7 +618,7 @@ class InstallerTests(EnvironmentCase):
         self.assertNotIn(["index", "--full"], calls)
 
     def test_background_index_does_not_hold_install_output_open(self):
-        delay = 4.0
+        delay = 8.0
         started = time.monotonic()
         result = self.install(extra_env={"WSM_TEST_WAIT_INDEX": "0", "FAKE_CASS_INDEX_SLEEP": str(delay)})
         elapsed = time.monotonic() - started
