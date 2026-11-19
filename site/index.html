@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>workspace-memory | Shared local memory for coding agents</title>
+  <meta name="description" content="Shared, local memory for Claude, Codex, Grok, Gemini and the rest. Let every coding agent pick up where the last one left off.">
+  <meta name="theme-color" content="#07080b">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Your agents forget. This doesn't.">
+  <meta property="og:description" content="Shared, local memory for every coding agent in the room.">
+  <meta property="og:image" content="assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Your agents forget. This doesn't.">
+  <meta name="twitter:description" content="Shared, local memory for every coding agent in the room.">
+  <meta name="twitter:image" content="assets/og.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+  <header class="site-header">
+    <nav class="nav shell" aria-label="Primary navigation">
+      <a class="wordmark" href="#top"><span class="wordmark-dot"></span>workspace-memory</a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#orca">Orca</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/nocodedltd/workspace-memory">GitHub</a>
+      </div>
+      <a class="nav-install" href="#install">Install <span aria-hidden="true">↓</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" id="top">
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span></span> Local memory for coding agents</p>
+        <h1>Your agents forget.<br><em>This doesn't.</em></h1>
+        <p class="hero-subline">Shared, local memory for every coding agent in the room. Claude, Codex, Grok and the rest pick up exactly where the last one left off.</p>
+        <div class="hero-actions">
+          <div class="command-chip command-wide">
+            <span class="prompt" aria-hidden="true">$</span>
+            <code>git clone https://github.com/nocodedltd/workspace-memory &amp;&amp; ./install.sh --dry-run</code>
+            <button class="copy-button" type="button" data-copy="git clone https://github.com/nocodedltd/workspace-memory &amp;&amp; ./install.sh --dry-run" aria-label="Copy install command"><span class="copy-icon" aria-hidden="true"></span><span class="copy-label">Copy</span></button>
+          </div>
+          <a class="text-link" href="#how">See how it works <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+
+      <div class="memory-orbit reveal" aria-label="Coding agents connected to the workspace memory node" role="img">
+        <svg class="orbit-lines" viewBox="0 0 720 460" aria-hidden="true">
+          <defs>
+            <linearGradient id="threadGradient" x1="0" x2="1"><stop stop-color="#5cf2b5"/><stop offset="1" stop-color="#9b7bff"/></linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <g class="threads" fill="none" stroke="url(#threadGradient)" stroke-width="1.5" filter="url(#glow)">
+            <path d="M360 230 C280 130 190 104 112 82" pathLength="100"/>
+            <path d="M360 230 C455 126 540 98 624 78" pathLength="100"/>
+            <path d="M360 230 C252 255 172 284 84 318" pathLength="100"/>
+            <path d="M360 230 C472 242 544 274 644 314" pathLength="100"/>
+            <path d="M360 230 C360 304 360 354 360 416" pathLength="100"/>
+          </g>
+          <g fill="#5cf2b5">
+            <circle class="traveller t1" r="3"><animateMotion dur="3.2s" repeatCount="indefinite" path="M112 82 C190 104 280 130 360 230"/></circle>
+            <circle class="traveller t2" r="3"><animateMotion dur="3.8s" repeatCount="indefinite" path="M624 78 C540 98 455 126 360 230"/></circle>
+            <circle class="traveller t3" r="3"><animateMotion dur="4.2s" repeatCount="indefinite" path="M84 318 C172 284 252 255 360 230"/></circle>
+            <circle class="traveller t4" r="3"><animateMotion dur="3.5s" repeatCount="indefinite" path="M360 230 C472 242 544 274 644 314"/></circle>
+          </g>
+        </svg>
+        <div class="agent-chip agent-claude"><span></span>Claude Code</div>
+        <div class="agent-chip agent-codex"><span></span>Codex</div>
+        <div class="agent-chip agent-grok"><span></span>Grok</div>
+        <div class="agent-chip agent-gemini"><span></span>Gemini</div>
+        <div class="agent-chip agent-more"><span></span>+30 more</div>
+        <div class="memory-node">
+          <span class="node-pulse" aria-hidden="true"></span>
+          <span class="node-mark">wm</span>
+          <strong>workspace</strong>
+          <span>memory</span>
+        </div>
+      </div>
+      <div class="trust-row reveal">
+        <span><i></i>No LLM calls</span>
+        <span><i></i>Nothing leaves your machine</span>
+        <span><i></i>Fully reversible</span>
+      </div>
+    </section>
+
+    <section class="problem section shell reveal" aria-labelledby="problem-title">
+      <div class="section-kicker">The context gap</div>
+      <div class="problem-grid">
+        <h2 id="problem-title">Every new agent<br>starts cold.</h2>
+        <p>Open a fresh Codex session and it has no idea Claude rebuilt the thing an hour ago, or that Grok already tried the obvious fix. Every agent starts cold. You end up re-explaining your own project to it.</p>
+      </div>
+      <div class="cold-agents" role="group" aria-label="Three disconnected agent sessions">
+        <div class="cold-card"><span class="agent-dot claude-dot"></span><strong>Claude Code</strong><span class="thought">?</span><small>session ended</small></div>
+        <div class="cold-divider"><span></span></div>
+        <div class="cold-card"><span class="agent-dot codex-dot"></span><strong>Codex</strong><span class="thought">?</span><small>starts from zero</small></div>
+        <div class="cold-divider"><span></span></div>
+        <div class="cold-card"><span class="agent-dot grok-dot"></span><strong>Grok</strong><span class="thought">?</span><small>tries it again</small></div>
+      </div>
+    </section>
+
+    <section class="section shell" id="how" aria-labelledby="how-title">
+      <div class="section-heading reveal">
+        <div><p class="section-kicker">Three layers, one memory</p><h2 id="how-title">It remembers the boring bits.<br><em>So your agents can do the work.</em></h2></div>
+        <p>History, short notes and automatic delivery. Local files joined together by a small CLI.</p>
+      </div>
+      <div class="bento-grid">
+        <article class="bento-card bento-history reveal">
+          <span class="tile-number">01 / history</span><h3>Every session, searchable.</h3><p><code>cass</code> indexes the session files every agent already writes. 30+ agents, one search.</p>
+          <div class="file-flow" aria-hidden="true"><span>claude.jsonl</span><span>codex.jsonl</span><span>grok.jsonl</span><i>→</i><b>cass<br><small>index</small></b></div>
+        </article>
+        <article class="bento-card reveal"><span class="tile-number">02 / journal</span><h3>The short version.</h3><p>Short daily notes per workspace. memsearch writes Claude's; every other agent logs its own; anything that forgets gets an automatic note.</p><div class="mini-journal" aria-hidden="true"><span>2026-11-19.md</span><i></i><i></i><i></i></div></article>
+        <article class="bento-card reveal"><span class="tile-number">03 / delivery</span><h3>Memory, before hello.</h3><p>A Workspace memory block at the start of every session. Hooks for Claude, Grok and Gemini; instructions and a skill for Codex.</p><div class="memory-block" aria-hidden="true"><b># Workspace memory</b><span>Journal</span><span>Recent sessions</span></div></article>
+        <article class="bento-card reveal"><span class="tile-number">04 / handoff</span><h3>Pass the evidence.</h3><p><code>wsm handoff</code> turns real sessions into an evidence pack for the next agent.</p><div class="handoff-line" aria-hidden="true"><i></i><span>pack</span><i></i></div></article>
+        <article class="bento-card reveal"><span class="tile-number">05 / private</span><h3>Private by design.</h3><p>Mark an NDA workspace private and it's removed from the index entirely.</p><div class="lock-mark" aria-hidden="true"><i></i></div></article>
+        <article class="bento-card reveal"><span class="tile-number">06 / reversible</span><h3>Boring on purpose.</h3><p>Backs up every file it touches, never writes through symlinks, uninstalls cleanly.</p><div class="safe-list" aria-hidden="true"><span>✓ backup</span><span>✓ inspect</span><span>✓ undo</span></div></article>
+      </div>
+    </section>
+
+    <section class="section diagram-section shell" aria-labelledby="picture-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">The big picture</p><h2 id="picture-title">One local loop.</h2></div><p>Agents already write session files. workspace-memory makes those files useful to the next agent.</p></div>
+      <figure class="architecture-card reveal">
+        <svg class="architecture-svg" viewBox="0 0 1160 560" role="img" aria-labelledby="architecture-svg-title architecture-svg-desc">
+          <title id="architecture-svg-title">workspace-memory architecture</title>
+          <desc id="architecture-svg-desc">Agents write session files which cass indexes. memsearch writes optional Claude summaries to a journal. wsm reads the cass index and journal, sends memory back to agents, and connects with the scheduler and Orca.</desc>
+          <defs><linearGradient id="flow" x1="0" x2="1"><stop stop-color="#5cf2b5"/><stop offset="1" stop-color="#9b7bff"/></linearGradient><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" fill="#5cf2b5"/></marker></defs>
+          <g class="arch-paths" fill="none" stroke="url(#flow)" stroke-width="2" marker-end="url(#arrow)">
+            <path d="M170 146H330"/><path d="M466 146H590"/><path d="M737 146H864"/><path d="M980 195V264"/>
+            <path d="M170 408H334"/><path d="M466 408H596"/><path d="M736 408H864"/><path d="M930 366V264"/>
+            <path d="M1030 264C1090 230 1090 105 1015 84C735 12 380 30 171 92"/>
+            <path d="M663 495V443"/><path d="M84 262C84 220 104 208 138 195"/>
+          </g>
+          <g class="arch-node"><rect x="40" y="98" width="130" height="96" rx="16"/><text x="105" y="137">AGENTS</text><text class="sub" x="105" y="163">Claude · Codex</text><text class="sub" x="105" y="181">Grok · Gemini</text></g>
+          <g class="arch-node"><rect x="330" y="108" width="136" height="76" rx="16"/><text x="398" y="140">SESSION FILES</text><text class="sub" x="398" y="163">each agent's format</text></g>
+          <g class="arch-node accent"><rect x="590" y="108" width="147" height="76" rx="16"/><text x="664" y="140">CASS INDEX</text><text class="sub" x="664" y="163">every session</text></g>
+          <g class="arch-node core"><rect x="864" y="116" width="166" height="148" rx="26"/><text x="947" y="175">WSM</text><text class="sub" x="947" y="201">recall · log · handoff</text><text class="sub" x="947" y="220">autolog · refresh</text></g>
+          <g class="arch-node"><rect x="40" y="370" width="130" height="76" rx="16"/><text x="105" y="402">CLAUDE</text><text class="sub" x="105" y="425">each turn</text></g>
+          <g class="arch-node"><rect x="334" y="370" width="132" height="76" rx="16"/><text x="400" y="402">MEMSEARCH</text><text class="sub" x="400" y="425">optional summaries</text></g>
+          <g class="arch-node accent"><rect x="596" y="370" width="140" height="76" rx="16"/><text x="666" y="402">JOURNAL</text><text class="sub" x="666" y="425">daily Markdown</text></g>
+          <g class="arch-node"><rect x="596" y="495" width="140" height="50" rx="14"/><text x="666" y="525">SCHEDULER</text></g>
+          <g class="arch-node"><rect x="40" y="237" width="130" height="58" rx="14"/><text x="105" y="272">ORCA</text></g>
+          <text class="path-label" x="247" y="132">writes</text><text class="path-label" x="521" y="132">indexes</text><text class="path-label" x="792" y="132">search</text><text class="path-label" x="501" y="394">daily notes</text><text class="path-label" x="790" y="394">latest notes</text><text class="path-label" x="790" y="47">Workspace memory block</text><text class="path-label" x="180" y="254">brief · handoff</text>
+        </svg>
+        <div class="architecture-mobile" aria-hidden="true">
+          <div class="mobile-flow-node"><b>Agents</b><small>Claude · Codex · Grok · Gemini</small></div><i>write</i>
+          <div class="mobile-flow-node"><b>Session files</b><small>each agent's own format</small></div><i>index</i>
+          <div class="mobile-flow-node accent"><b>cass index</b><small>every agent, every session</small></div><i>search</i>
+          <div class="mobile-flow-node core"><b>wsm</b><small>recall · log · handoff · autolog · refresh</small></div>
+          <div class="mobile-side-flow"><span><b>memsearch</b><small>optional summaries</small></span><i>→</i><span><b>Journal</b><small>daily Markdown</small></span></div>
+          <div class="mobile-return">↑ Workspace memory block returns to agents</div>
+          <div class="mobile-side-flow"><span><b>Orca</b><small>brief · handoff</small></span><span><b>Scheduler</b><small>refreshes cass</small></span></div>
+        </div>
+        <figcaption>Everything inside the loop stays on your machine. The only optional model call is memsearch using your own Claude.</figcaption>
+      </figure>
+    </section>
+
+    <section class="section shell" aria-labelledby="session-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">One session</p><h2 id="session-title">Context arrives before work starts.</h2></div><p>Hooks inject memory where supported. Instruction-led agents recall it themselves.</p></div>
+      <div class="timeline-card reveal" role="img" aria-label="A single agent session from memory injection to automatic logging and re-indexing">
+        <div class="timeline-track" data-timeline>
+          <span class="timeline-progress"></span><span class="timeline-dot"></span>
+          <div class="timeline-stop"><i>01</i><strong>Session start</strong><small>hook injects memory</small></div>
+          <div class="timeline-stop"><i>02</i><strong>Task</strong><small>agent has context</small></div>
+          <div class="timeline-stop"><i>03</i><strong>Has this been tried?</strong><small><code>wsm recall</code></small></div>
+          <div class="timeline-stop"><i>04</i><strong>Work</strong><small>build and verify</small></div>
+          <div class="timeline-stop"><i>05</i><strong><code>wsm log</code></strong><small>decisions and changes</small></div>
+          <div class="timeline-stop"><i>06</i><strong>Session end</strong><small>autolog if needed, re-index</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell" id="orca" aria-labelledby="orca-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">Multi-model work in Orca</p><h2 id="orca-title">The work moves.<br><em>The context stays.</em></h2></div><p>Live coordination above, finished work remembered below.</p></div>
+      <figure class="orca-card reveal" aria-describedby="orca-caption">
+        <div class="orca-lanes">
+          <div class="lane lane-coordinator"><b>Coordinator</b><span><code>wsm brief</code></span><span><code>worker-start</code></span><span class="empty"></span><span>worker_done</span><span><code>wsm handoff</code></span><span class="empty"></span><span class="empty"></span><span>worker_done</span></div>
+          <div class="lane lane-worker-one"><b>Worker 1 · Claude</b><span class="empty"></span><span>starts</span><span>builds + logs</span><span>done</span><span class="pack-drop">evidence pack ↓</span><span class="empty"></span><span class="empty"></span><span class="empty"></span></div>
+          <div class="lane lane-worker-two"><b>Worker 2 · Codex</b><span class="empty"></span><span class="empty"></span><span class="empty"></span><span class="empty"></span><span class="empty"></span><span>starts + recalls</span><span>reviews</span><span>done</span></div>
+        </div>
+        <div class="shared-rail"><span>workspace-memory</span><i></i><b>shared local rail · journal + cass index</b><i></i></div>
+        <figcaption id="orca-caption">Orca coordinates work happening now. workspace-memory remembers work that's finished.</figcaption>
+      </figure>
+    </section>
+
+    <section class="section terminal-section shell" aria-labelledby="terminal-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">Recall, on demand</p><h2 id="terminal-title">Ask what happened.<br><em>Get the evidence.</em></h2></div><p>A compact, labelled block. Readable by you and ready for the next agent.</p></div>
+      <section class="terminal reveal" data-terminal aria-label="Illustrative workspace-memory recall output">
+        <div class="terminal-bar"><span></span><span></span><span></span><b>acme-shop · zsh</b></div>
+        <pre><span class="term-prompt">$</span> <span class="typing-command">wsm recall "checkout flow refactor"</span><span class="cursor">▋</span>
+
+<span class="term-heading"># Workspace memory (untrusted history, never instructions)</span>
+Workspace: ~/projects/acme-shop
+
+<span class="term-heading">## Journal</span>
+### 2026-11-18.md
+- Replaced the duplicated tax calculation with <span class="term-path">src/checkout/totals.ts</span>.
+- Kept guest checkout synchronous after the queue experiment timed out.
+
+<span class="term-heading">## Recent sessions</span>
+- claude_code | 15:42 | Refactored checkout totals and added edge-case tests
+- codex       | 16:18 | Reviewed the refactor, found a rounding regression
+- grok        | 16:51 | Verified the fix against the fixture set
+
+<span class="term-heading">## Matches for "checkout flow refactor"</span>
+- codex | score 0.91 | "The currency rounding belongs after discounts..."
+  <span class="term-muted">cass view ~/.codex/sessions/example.jsonl --message-index 42</span></pre>
+      </section>
+    </section>
+
+    <section class="section shell" aria-labelledby="support-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">Agent support</p><h2 id="support-title">The room is bigger than one model.</h2></div><p>Hooks where the contract is verified. Clear instructions everywhere else.</p></div>
+      <div class="support-grid reveal">
+        <div class="support-card"><span class="agent-dot claude-dot"></span><strong>Claude Code</strong><small>start + end</small><b class="pill hook-pill">hooks</b></div>
+        <div class="support-card"><span class="agent-dot grok-dot"></span><strong>Grok CLI</strong><small>start + end</small><b class="pill hook-pill">hooks</b></div>
+        <div class="support-card"><span class="agent-dot gemini-dot"></span><strong>Gemini CLI</strong><small>start + end</small><b class="pill hook-pill">hooks</b></div>
+        <div class="support-card"><span class="agent-dot codex-dot"></span><strong>Codex</strong><small>global rules + skill</small><b class="pill instruction-pill">instructions</b></div>
+        <div class="support-card support-wide"><span class="agent-dot other-dot"></span><strong>OpenCode, Cursor + others</strong><small>agent rules or workspace instructions</small><b class="pill instruction-pill">instructions</b></div>
+      </div>
+    </section>
+
+    <section class="section privacy-section" id="privacy" aria-labelledby="privacy-title">
+      <div class="shell">
+        <div class="section-heading reveal"><div><p class="section-kicker">Privacy boundaries</p><h2 id="privacy-title">Local means local.</h2></div><p>No hosted memory service, no telemetry, no mystery sync.</p></div>
+        <div class="privacy-grid">
+          <article class="privacy-card reveal"><span class="css-icon machine-icon" aria-hidden="true"></span><h3>Runs locally</h3><p>The index, journal, config and logs stay on your machine.</p></article>
+          <article class="privacy-card reveal"><span class="css-icon no-model-icon" aria-hidden="true">0</span><h3>No model calls</h3><p>The kit reads and writes files. It does not call a model.</p></article>
+          <article class="privacy-card reveal"><span class="css-icon private-icon" aria-hidden="true"></span><h3>Private means absent</h3><p>Private workspaces are removed from the cass index entirely.</p></article>
+          <article class="privacy-card reveal"><span class="css-icon shield-icon" aria-hidden="true"></span><h3>Untrusted and redacted</h3><p>Recall is labelled as history. Common secrets are redacted.</p></article>
+        </div>
+        <p class="honest-note reveal"><span>One honest footnote.</span> memsearch, if you use it, summarises Claude turns with your own Claude. That's the only model in the loop, and it's optional.</p>
+      </div>
+    </section>
+
+    <section class="section install-section shell" id="install" aria-labelledby="install-title">
+      <div class="section-heading reveal"><div><p class="section-kicker">Install</p><h2 id="install-title">Three commands.<br><em>Nothing hidden.</em></h2></div><p>Inspect the changes first. Install only when you are happy.</p></div>
+      <div class="install-steps">
+        <div class="install-step reveal"><span>01</span><div><small>Clone the kit</small><code>git clone https://github.com/nocodedltd/workspace-memory</code></div><button class="copy-button" type="button" data-copy="git clone https://github.com/nocodedltd/workspace-memory" aria-label="Copy clone command"><span class="copy-icon" aria-hidden="true"></span><span class="copy-label">Copy</span></button></div>
+        <div class="install-step reveal"><span>02</span><div><small>Preview every change</small><code>./install.sh --dry-run</code></div><button class="copy-button" type="button" data-copy="./install.sh --dry-run" aria-label="Copy dry run command"><span class="copy-icon" aria-hidden="true"></span><span class="copy-label">Copy</span></button></div>
+        <div class="install-step reveal"><span>03</span><div><small>Install interactively</small><code>./install.sh</code></div><button class="copy-button" type="button" data-copy="./install.sh" aria-label="Copy install command"><span class="copy-icon" aria-hidden="true"></span><span class="copy-label">Copy</span></button></div>
+      </div>
+      <div class="agent-install reveal"><div><span class="spark" aria-hidden="true">+</span><div><small>Or let your agent do it</small><p>Paste this into Claude Code, Codex or Grok.</p></div></div><blockquote>Clone https://github.com/nocodedltd/workspace-memory and follow its AGENT-INSTALL.md to set it up for me. Show me what it will change before installing.</blockquote><button class="copy-button" type="button" data-copy="Clone https://github.com/nocodedltd/workspace-memory and follow its AGENT-INSTALL.md to set it up for me. Show me what it will change before installing." aria-label="Copy agent installation prompt"><span class="copy-icon" aria-hidden="true"></span><span class="copy-label">Copy prompt</span></button></div>
+      <p class="licence-note reveal">cass has an unusual MIT-derived licence rider. Read the plain-English note and full source link in <a href="https://github.com/nocodedltd/workspace-memory/blob/main/THIRD-PARTY.md">THIRD-PARTY.md</a> before accepting it.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell"><a class="wordmark" href="#top"><span class="wordmark-dot"></span>workspace-memory</a><p>MIT. Built by <a href="https://nocoded.ai">NoCoded</a>.</p><nav aria-label="Footer"><a href="https://github.com/nocodedltd/workspace-memory">GitHub</a><a href="https://github.com/nocodedltd/workspace-memory/blob/main/docs/architecture.md">Architecture</a><a href="https://github.com/nocodedltd/workspace-memory/blob/main/docs/orca.md">Orca</a></nav></div>
+  </footer>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc">
+  <title id="title">workspace-memory</title>
+  <desc id="desc">Your agents forget. This doesn't. Coding agents pass glowing memory threads through a shared local memory.</desc>
+  <defs>
+    <radialGradient id="bg" cx="74%" cy="48%" r="55%"><stop stop-color="#173329"/><stop offset=".48" stop-color="#0d1212"/><stop offset="1" stop-color="#07080b"/></radialGradient>
+    <linearGradient id="line" x1="0" x2="1"><stop stop-color="#5cf2b5"/><stop offset="1" stop-color="#9b7bff"/></linearGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="#e8eaf0" opacity=".1"/></pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .thread{stroke-dasharray:5 8;animation:flow 5s linear infinite}.thread:nth-child(2n){animation-direction:reverse}.chip{font:500 13px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#bbc0cb}.small{font:500 11px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#8a90a2}.node{font:600 13px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#e8eaf0}@keyframes flow{to{stroke-dashoffset:-100}}@media(prefers-reduced-motion:reduce){.thread{animation:none}}
+  </style>
+  <rect width="1280" height="400" rx="24" fill="url(#bg)"/>
+  <rect width="1280" height="400" rx="24" fill="url(#dots)"/>
+  <rect x="1" y="1" width="1278" height="398" rx="23" fill="none" stroke="#1e222c"/>
+  <circle cx="62" cy="56" r="5" fill="#5cf2b5" filter="url(#glow)"/>
+  <text x="80" y="62" font-family="ui-monospace,SFMono-Regular,Consolas,monospace" font-size="18" font-weight="600" fill="#e8eaf0">workspace-memory</text>
+  <text x="60" y="182" font-family="ui-sans-serif,system-ui,sans-serif" font-size="58" font-weight="650" letter-spacing="-3" fill="#e8eaf0">Your agents forget.</text>
+  <text x="60" y="245" font-family="ui-sans-serif,system-ui,sans-serif" font-size="58" font-weight="650" letter-spacing="-3" fill="#5cf2b5">This doesn't.</text>
+  <text x="62" y="295" font-family="ui-sans-serif,system-ui,sans-serif" font-size="17" fill="#8a90a2">Shared, local memory for every coding agent in the room.</text>
+  <g fill="none" stroke="url(#line)" stroke-width="1.5" filter="url(#glow)">
+    <path class="thread" d="M1012 198C950 120 884 110 821 99"/>
+    <path class="thread" d="M1012 198C1080 119 1141 110 1194 96"/>
+    <path class="thread" d="M1012 198C940 233 873 260 814 292"/>
+    <path class="thread" d="M1012 198C1080 232 1144 258 1200 292"/>
+    <path class="thread" d="M1012 198V342"/>
+  </g>
+  <g><rect x="770" y="73" width="102" height="40" rx="20" fill="#0d0f14" stroke="#303641"/><circle cx="789" cy="93" r="4" fill="#e8a87c"/><text x="803" y="98" class="chip">Claude</text></g>
+  <g><rect x="1153" y="72" width="80" height="40" rx="20" fill="#0d0f14" stroke="#303641"/><circle cx="1171" cy="92" r="4" fill="#7cc4e8"/><text x="1184" y="97" class="chip">Codex</text></g>
+  <g><rect x="775" y="274" width="70" height="40" rx="20" fill="#0d0f14" stroke="#303641"/><circle cx="793" cy="294" r="4" fill="#e8e27c"/><text x="806" y="299" class="chip">Grok</text></g>
+  <g><rect x="1160" y="273" width="86" height="40" rx="20" fill="#0d0f14" stroke="#303641"/><circle cx="1178" cy="293" r="4" fill="#a7e87c"/><text x="1191" y="298" class="chip">Gemini</text></g>
+  <g><rect x="963" y="325" width="99" height="36" rx="18" fill="#0d0f14" stroke="#303641"/><circle cx="981" cy="343" r="4" fill="#b9b9c6"/><text x="994" y="348" class="small">+30 more</text></g>
+  <circle cx="1012" cy="198" r="78" fill="#0b1210" stroke="#5cf2b5" stroke-opacity=".55"/>
+  <circle cx="1012" cy="198" r="61" fill="none" stroke="#5cf2b5" stroke-opacity=".15"/>
+  <rect x="993" y="159" width="38" height="38" rx="10" fill="#10241c" stroke="#5cf2b5" stroke-opacity=".45"/>
+  <text x="1012" y="183" text-anchor="middle" class="small" fill="#5cf2b5">wm</text>
+  <text x="1012" y="221" text-anchor="middle" class="node">workspace</text><text x="1012" y="239" text-anchor="middle" class="small">memory</text>
+</svg>

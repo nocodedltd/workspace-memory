@@ -1,4 +1,14 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
+  <img alt="workspace-memory: Your agents forget. This doesn't." src="assets/banner.svg" width="1280">
+</picture>
+
 # workspace-memory
+
+Shared, local memory for every coding agent in the room.
+
+![Licence: MIT](assets/badges/licence.svg) ![Platform: macOS and Linux](assets/badges/platform.svg) ![No LLM calls](assets/badges/no-llm.svg) ![Local only](assets/badges/local.svg)
 
 workspace-memory gives coding agents a shared, local memory for each workspace. A fresh Claude Code, Codex, Grok, Gemini CLI or other agent can see what earlier agents tried, changed and decided without sending project history to a hosted memory service.
 
