@@ -22,7 +22,7 @@ Or let your coding agent do it. Paste this into Claude Code, Codex or Grok:
 
 > Clone https://github.com/nocodedltd/workspace-memory and follow its AGENT-INSTALL.md to set it up for me. Show me what it will change before installing.
 
-Running several agents in Orca? Read [docs/orca.md](docs/orca.md) for how it fits with Orca orchestration.
+**How it works, with diagrams:** [docs/architecture.md](docs/architecture.md) explains how cass, memsearch and Orca orchestration fit together. Running several agents in Orca? [docs/orca.md](docs/orca.md) has the short version.
 
 ## Requirements
 

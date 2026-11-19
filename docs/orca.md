@@ -15,3 +15,5 @@ Use `wsm handoff "<topic>"` when a finished agent needs to give another agent a 
 A coordinator may use `wsm recall --all "<topic>"` to look across workspaces. This is deliberately explicit, prints a warning and still excludes every path on the private-workspace list.
 
 Orca-launched Codex sessions use account-specific home directories under Orca's application support directory. cass already discovers and indexes those locations, so no Orca session export is needed.
+
+For the full picture, including diagrams of a worker hand-off, see [architecture.md](architecture.md).
