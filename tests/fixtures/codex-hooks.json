@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "UnrelatedEvent": [
+      {
+        "command": "/usr/local/bin/existing-codex-hook"
+      }
+    ]
+  }
+}

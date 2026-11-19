@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import time
+
+args = sys.argv[1:]
+mode = os.environ.get("FAKE_CASS_MODE", "normal")
+log = os.environ.get("FAKE_CASS_LOG")
+if log:
+    with open(log, "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(args) + "\n")
+env_log = os.environ.get("FAKE_CASS_ENV_LOG")
+if env_log:
+    with open(env_log, "a", encoding="utf-8") as handle:
+        handle.write(f"{args[0] if args else 'none'}:{os.environ.get('CASS_RAW_MIRROR', '')}\n")
+
+if mode == "hang":
+    time.sleep(10)
+if mode == "error":
+    print("read-only database", file=sys.stderr)
+    raise SystemExit(1)
+if args == ["--version"]:
+    print(f"cass {os.environ.get('FAKE_CASS_VERSION', '0.11.0')}")
+elif args and args[0] == "health":
+    print(json.dumps({"status": "healthy", "healthy": True}))
+elif args and args[0] == "index":
+    delay = float(os.environ.get("FAKE_CASS_INDEX_SLEEP", "0"))
+    if delay:
+        time.sleep(delay)
+    index_code = int(os.environ.get("FAKE_CASS_INDEX_CODE", "0"))
+    if index_code:
+        print(os.environ.get("FAKE_CASS_INDEX_ERROR", "cass index is already running"), file=sys.stderr)
+        raise SystemExit(index_code)
+    print("indexed")
+elif args and args[0] == "status":
+    fresh = os.environ.get("FAKE_CASS_FRESH") == "1"
+    print(json.dumps({"healthy": fresh, "index": {"exists": fresh, "fresh": fresh}}))
+elif args and args[0] == "forget":
+    print(json.dumps({"ok": True, "arguments": args[1:]}))
+elif args and args[0] == "sessions":
+    workspace = os.environ.get("FAKE_WORKSPACE", "/work/project")
+    print(json.dumps({"sessions": [
+        {"path": "/sessions/a.jsonl", "workspace": workspace, "agent": "claude_code", "title": "Fixed upload retry", "modified": "2026-11-19T01:00:00+00:00"},
+        {"path": "/sessions/b.jsonl", "workspace": workspace + "/package", "agent": "codex", "title": "Added tests", "modified": "2026-11-19T02:00:00+00:00"},
+        {"path": "/sessions/private.jsonl", "workspace": "/private/client", "agent": "grok", "title": "Private", "modified": "2026-11-19T03:00:00+00:00"}
+    ]}))
+elif args and args[0] == "search":
+    workspace = os.environ.get("FAKE_WORKSPACE", "/work/project")
+    print(json.dumps({"hits": [
+        {"source_path": "/sessions/a.jsonl", "conversation_id": 1, "workspace": workspace, "agent": "claude_code", "title": "Upload decision", "snippet": "Implemented bounded retry", "line_number": 5},
+        {"source_path": "/sessions/a.jsonl", "conversation_id": 1, "workspace": workspace, "agent": "claude_code", "title": "duplicate", "snippet": "same session", "line_number": 8},
+        {"source_path": "/sessions/noise.jsonl", "conversation_id": 2, "workspace": workspace, "agent": "codex", "title": "tool", "snippet": "cass search upload --workspace /work/project", "line_number": 3},
+        {"source_path": "/sessions/c.jsonl", "conversation_id": 3, "workspace": workspace, "agent": "grok", "title": "Upload failure", "snippet": "Failed buffering and kept streaming", "line_number": 9}
+    ]}))
+elif args and args[0] == "view":
+    print(json.dumps({"lines": [
+        {"message_index": 1, "role": "user", "content": "Please repair the upload flow"},
+        {"message_index": 2, "role": "assistant", "content": "Implemented streaming upload with tests"}
+    ], "total_messages": 2}))
+elif args and args[0] == "pack":
+    print("# Handoff\n\nImplemented streaming upload.\n")
+else:
+    print(json.dumps({"ok": True}))

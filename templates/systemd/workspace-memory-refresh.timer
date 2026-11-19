@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh local workspace memory every 30 minutes
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=@MINUTES@m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

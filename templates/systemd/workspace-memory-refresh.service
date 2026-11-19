@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh local workspace memory
+
+[Service]
+Type=oneshot
+Environment=CASS_RAW_MIRROR=@RAW_MIRROR@
+Environment="WSM_CASS=@CASS@"
+ExecStart="@PYTHON@" "@WSM@" refresh --quiet
+Nice=10
+IOSchedulingClass=idle
+StandardOutput=append:@STATE@/refresh.log
+StandardError=append:@STATE@/refresh.log
