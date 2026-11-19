@@ -128,26 +128,42 @@
     <section class="section diagram-section shell" aria-labelledby="picture-title">
       <div class="section-heading reveal"><div><p class="section-kicker">The big picture</p><h2 id="picture-title">One local loop.</h2></div><p>Agents already write session files. workspace-memory makes those files useful to the next agent.</p></div>
       <figure class="architecture-card reveal">
-        <svg class="architecture-svg" viewBox="0 0 1160 560" role="img" aria-labelledby="architecture-svg-title architecture-svg-desc">
+        <svg class="architecture-svg" viewBox="0 0 1160 590" role="img" aria-labelledby="architecture-svg-title architecture-svg-desc">
           <title id="architecture-svg-title">workspace-memory architecture</title>
           <desc id="architecture-svg-desc">Agents write session files which cass indexes. memsearch writes optional Claude summaries to a journal. wsm reads the cass index and journal, sends memory back to agents, and connects with the scheduler and Orca.</desc>
-          <defs><linearGradient id="flow" x1="0" x2="1"><stop stop-color="#5cf2b5"/><stop offset="1" stop-color="#9b7bff"/></linearGradient><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" fill="#5cf2b5"/></marker></defs>
-          <g class="arch-paths" fill="none" stroke="url(#flow)" stroke-width="2" marker-end="url(#arrow)">
-            <path d="M170 146H330"/><path d="M466 146H590"/><path d="M737 146H864"/><path d="M980 195V264"/>
-            <path d="M170 408H334"/><path d="M466 408H596"/><path d="M736 408H864"/><path d="M930 366V264"/>
-            <path d="M1030 264C1090 230 1090 105 1015 84C735 12 380 30 171 92"/>
-            <path d="M663 495V443"/><path d="M84 262C84 220 104 208 138 195"/>
+          <defs>
+            <linearGradient id="flow" x1="0" x2="1"><stop stop-color="#5cf2b5"/><stop offset="1" stop-color="#9b7bff"/></linearGradient>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l10 5-10 5z" fill="#687180"/></marker>
+            <marker id="arrowBright" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l10 5-10 5z" fill="#5cf2b5"/></marker>
+          </defs>
+          <g class="arch-base" fill="none">
+            <path d="M210 180H300"/><path d="M450 180H555"/><path d="M705 180H880"/>
+            <path d="M125 255C125 330 225 410 300 410"/>
+            <path d="M450 410H555"/><path d="M705 392C785 370 825 285 880 230"/>
+            <path d="M880 250C810 315 790 430 705 430"/>
+            <path d="M705 528H790V285H630V220"/>
+            <path d="M210 400C430 285 690 285 880 215"/>
+            <path class="arch-dotted" d="M125 375V255"/>
+            <path class="arch-return" d="M980 105C970 40 240 35 125 110" marker-end="url(#arrowBright)"/>
           </g>
-          <g class="arch-node"><rect x="40" y="98" width="130" height="96" rx="16"/><text x="105" y="137">AGENTS</text><text class="sub" x="105" y="163">Claude · Codex</text><text class="sub" x="105" y="181">Grok · Gemini</text></g>
-          <g class="arch-node"><rect x="330" y="108" width="136" height="76" rx="16"/><text x="398" y="140">SESSION FILES</text><text class="sub" x="398" y="163">each agent's format</text></g>
-          <g class="arch-node accent"><rect x="590" y="108" width="147" height="76" rx="16"/><text x="664" y="140">CASS INDEX</text><text class="sub" x="664" y="163">every session</text></g>
-          <g class="arch-node core"><rect x="864" y="116" width="166" height="148" rx="26"/><text x="947" y="175">WSM</text><text class="sub" x="947" y="201">recall · log · handoff</text><text class="sub" x="947" y="220">autolog · refresh</text></g>
-          <g class="arch-node"><rect x="40" y="370" width="130" height="76" rx="16"/><text x="105" y="402">CLAUDE</text><text class="sub" x="105" y="425">each turn</text></g>
-          <g class="arch-node"><rect x="334" y="370" width="132" height="76" rx="16"/><text x="400" y="402">MEMSEARCH</text><text class="sub" x="400" y="425">optional summaries</text></g>
-          <g class="arch-node accent"><rect x="596" y="370" width="140" height="76" rx="16"/><text x="666" y="402">JOURNAL</text><text class="sub" x="666" y="425">daily Markdown</text></g>
-          <g class="arch-node"><rect x="596" y="495" width="140" height="50" rx="14"/><text x="666" y="525">SCHEDULER</text></g>
-          <g class="arch-node"><rect x="40" y="237" width="130" height="58" rx="14"/><text x="105" y="272">ORCA</text></g>
-          <text class="path-label" x="247" y="132">writes</text><text class="path-label" x="521" y="132">indexes</text><text class="path-label" x="792" y="132">search</text><text class="path-label" x="501" y="394">daily notes</text><text class="path-label" x="790" y="394">latest notes</text><text class="path-label" x="790" y="47">Workspace memory block</text><text class="path-label" x="180" y="254">brief · handoff</text>
+          <g class="arch-pulse" fill="none" aria-hidden="true">
+            <path d="M210 180H300"/><path d="M450 180H555"/><path d="M705 180H880"/>
+            <path d="M125 255C125 330 225 410 300 410"/><path d="M450 410H555"/>
+            <path d="M705 392C785 370 825 285 880 230"/><path d="M880 250C810 315 790 430 705 430"/>
+            <path d="M705 528H790V285H630V220"/><path d="M210 400C430 285 690 285 880 215"/>
+            <path class="arch-return-pulse" d="M980 105C970 40 240 35 125 110"/>
+          </g>
+          <g class="arch-node"><rect x="40" y="110" width="170" height="145" rx="18"/><text x="125" y="145">AGENTS</text><line x1="58" y1="160" x2="192" y2="160"/><text class="sub agent-claude-label" x="125" y="187">Claude Code</text><text class="sub" x="125" y="211">Codex · Grok · Gemini</text><text class="sub" x="125" y="230">and 30+ others</text></g>
+          <g class="arch-node"><rect x="300" y="135" width="150" height="90" rx="16"/><text x="375" y="174">SESSION FILES</text><text class="sub" x="375" y="198">each agent's own format</text></g>
+          <g class="arch-node accent"><rect x="555" y="135" width="150" height="90" rx="16"/><text x="630" y="174">CASS INDEX</text><text class="sub" x="630" y="198">every agent, every session</text></g>
+          <g class="arch-node core"><rect x="880" y="105" width="200" height="180" rx="26"/><text x="980" y="168">WSM</text><text class="sub" x="980" y="197">recall · log · handoff</text><text class="sub" x="980" y="218">autolog · refresh</text><text class="sub" x="980" y="251">joins the local memory</text></g>
+          <g class="arch-node"><rect x="300" y="370" width="150" height="80" rx="16"/><text x="375" y="405">MEMSEARCH</text><text class="sub" x="375" y="429">optional Claude summaries</text></g>
+          <g class="arch-node accent"><rect x="555" y="370" width="150" height="80" rx="16"/><text x="630" y="405">JOURNAL</text><text class="sub" x="630" y="429">daily Markdown</text></g>
+          <g class="arch-node"><rect x="555" y="500" width="150" height="56" rx="14"/><text x="630" y="533">SCHEDULER</text></g>
+          <g class="arch-node"><rect x="40" y="375" width="170" height="90" rx="16"/><text x="125" y="414">ORCA</text><text class="sub" x="125" y="438">live orchestration</text></g>
+          <text class="path-label" x="255" y="166">writes</text><text class="path-label" x="503" y="166">indexes</text><text class="path-label" x="792" y="166">search · sessions · view · pack</text>
+          <text class="path-label" x="210" y="340">each Claude turn</text><text class="path-label" x="503" y="396">daily notes</text><text class="path-label" x="800" y="350">latest notes</text><text class="path-label" x="802" y="430">autolog</text>
+          <text class="path-label" x="814" y="510">wsm refresh</text><text class="path-label" x="545" y="286">brief · handoff</text><text class="path-label" x="92" y="318">starts workers</text><text class="path-label return-label" x="565" y="55">Workspace memory block returns to every agent</text>
         </svg>
         <div class="architecture-mobile" aria-hidden="true">
           <div class="mobile-flow-node"><b>Agents</b><small>Claude · Codex · Grok · Gemini</small></div><i>write</i>

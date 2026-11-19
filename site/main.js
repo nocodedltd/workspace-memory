@@ -68,10 +68,10 @@ const typingCommand = document.querySelector('.typing-command');
 
 if (typingCommand && !reducedMotion) {
   const fullText = typingCommand.textContent ?? '';
-  typingCommand.textContent = '';
 
   const typeCommand = () => {
     let index = 0;
+    typingCommand.textContent = '';
     const interval = window.setInterval(() => {
       typingCommand.textContent = fullText.slice(0, index + 1);
       index += 1;
