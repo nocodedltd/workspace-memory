@@ -397,9 +397,17 @@ class HookTests(EnvironmentCase):
         self.assertIn("Workspace memory", result.stdout)
 
     def test_hook_times_out_hanging_cass(self):
+        journal = self.workspace / ".agent-memory/journal"
+        journal.mkdir(parents=True)
+        (journal / "2026-11-19.md").write_text("journal survives cass timeout\n")
+        started = time.monotonic()
         result = self.run_wsm("hook", "session-start", "--agent", "gemini", input_text=json.dumps({"cwd": str(self.workspace)}), extra={"FAKE_CASS_MODE": "hang"})
+        elapsed = time.monotonic() - started
         self.assertEqual(result.returncode, 0)
-        self.assertIn("Workspace memory", result.stdout)
+        self.assertLess(elapsed, 4.0)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("journal survives cass timeout", context)
+        self.assertIn("Recent sessions omitted because recall timed out.", context)
 
     def test_hook_empty_and_invalid_payloads_still_recall(self):
         for payload in ("", "not-json"):
